@@ -29,6 +29,7 @@ public class AssemblyController {
         return ResponseEntity.ok("{\"message\": \"Assembly closed successfully.\"}");
     }
 
+    @SuppressWarnings("unchecked")
     @PostMapping("/change-parameters")
     public ResponseEntity<String> changeParameters(@RequestBody Map<String, Object> request) {
         String partFilePath = (String) request.getOrDefault("partFilePath", "C:\\path\\to\\your\\part.ipt");
@@ -54,5 +55,14 @@ public class AssemblyController {
     @GetMapping("/assembly-status")
     public ResponseEntity<Map<String, Boolean>> getAssemblyStatus() {
         return ResponseEntity.ok(Collections.singletonMap("isAssemblyOpen", assemblyService.isAssemblyOpen()));
+    }
+
+    @PostMapping("/suppress-multiple-components")
+    public ResponseEntity<Map<String, Object>> suppressMultipleComponents(@RequestBody Map<String, Object> request) {
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> suppressActions = (List<Map<String, Object>>) request.get("suppressActions");
+
+        Map<String, Object> response = assemblyService.suppressMultipleComponents(suppressActions);
+        return ResponseEntity.ok(response);
     }
 }

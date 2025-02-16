@@ -13,19 +13,19 @@ import java.util.Optional;
 public class ImageConfigService {
 
     @Autowired
-    private ImageConfigRepository repository;
+    private ImageConfigRepository imageConfigRepository;
 
     public ImageConfig getImageConfig(String imageName) {
-        Optional<ImageConfig> imageConfig = repository.findById(imageName);
+        Optional<ImageConfig> imageConfig = imageConfigRepository.findById(imageName);
         return imageConfig.orElse(null); // Or throw an exception if you prefer
     }
 
     public List<String> getAllImageNames() {
-        return repository.getAllImageNames();
+        return imageConfigRepository.getAllImageNames();
     }
 
     public ImageConfig updateImageConfig(ImageConfig imageConfig) {
-        return repository.save(imageConfig); // Saves or updates based on ID
+        return imageConfigRepository.save(imageConfig); // Saves or updates based on ID
     }
 
 }
