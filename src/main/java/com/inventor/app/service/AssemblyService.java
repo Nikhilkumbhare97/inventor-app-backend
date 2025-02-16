@@ -186,55 +186,73 @@ public class AssemblyService {
         try {
             if (app == null) {
                 app = new ActiveXComponent("Inventor.Application");
-                app.setProperty("Visible", new Variant(true)); // Ensure Inventor is visible
+                app.setProperty("Visible", new Variant(true));
             }
 
-            // Open the assembly document
             Dispatch documents = app.getProperty("Documents").toDispatch();
             Dispatch assemblyDocument = Dispatch.call(documents, "Open", assemblyFilePath, false).toDispatch();
             Dispatch componentDefinition = Dispatch.get(assemblyDocument, "ComponentDefinition").toDispatch();
-            Dispatch occurrences = Dispatch.get(componentDefinition, "Occurrences").toDispatch();
 
-            boolean componentFound = false;
-            int count = Dispatch.get(occurrences, "Count").getInt();
+            boolean isPartFile = assemblyFilePath.toLowerCase().endsWith(".ipt");
 
-            // Iterate through occurrences to find the target component
-            for (int i = 1; i <= count; i++) {
-                Dispatch occurrence = Dispatch.call(occurrences, "Item", i).toDispatch();
-                String occurrenceName = Dispatch.get(occurrence, "Name").toString();
-
-                if (occurrenceName.equalsIgnoreCase(componentName)) {
-                    System.out.println("Found component: " + occurrenceName);
-
-                    // Suppress or unsuppress based on the input
-                    if (suppress) {
-                        Dispatch.call(occurrence, "Suppress");
-                        System.out.println("Component " + componentName + " suppressed.");
-                    } else {
-                        Dispatch.call(occurrence, "Unsuppress");
-                        System.out.println("Component " + componentName + " unsuppressed.");
-                    }
-
-                    componentFound = true;
-                    break;
+            if (isPartFile) {
+                // Suppress a Feature (Extrusion) inside a Part (.ipt)
+                Dispatch features = Dispatch.get(componentDefinition, "Features").toDispatch();
+                Dispatch feature = Dispatch.call(features, "Item", componentName).toDispatch();
+                if (feature != null) {
+                    Dispatch.put(feature, "Suppressed", new Variant(suppress));
+                    System.out.println("Feature " + componentName + " set to suppress: " + suppress);
+                    Dispatch.call(assemblyDocument, "Save");
+                    Dispatch.call(assemblyDocument, "Close");
+                    return true;
                 }
-            }
-
-            if (!componentFound) {
-                System.err.println("Component " + componentName + " not found in " + assemblyFilePath);
             } else {
-                // Save changes
-                Dispatch.call(assemblyDocument, "Save");
+                // Suppress a Component in an Assembly (.iam)
+                Dispatch occurrences = Dispatch.get(componentDefinition, "Occurrences").toDispatch();
+
+                boolean componentFound = false;
+                int count = Dispatch.get(occurrences, "Count").getInt();
+
+                // Iterate through occurrences to find the target component
+                for (int i = 1; i <= count; i++) {
+                    Dispatch occurrence = Dispatch.call(occurrences, "Item", i).toDispatch();
+                    String occurrenceName = Dispatch.get(occurrence, "Name").toString();
+
+                    if (occurrenceName.equalsIgnoreCase(componentName)) {
+                        System.out.println("Found component: " + occurrenceName);
+
+                        // Suppress or unsuppress based on the input
+                        if (suppress) {
+                            Dispatch.call(occurrence, "Suppress");
+                            System.out.println("Component " + componentName + " suppressed.");
+                        } else {
+                            Dispatch.call(occurrence, "Unsuppress");
+                            System.out.println("Component " + componentName + " unsuppressed.");
+                        }
+
+                        componentFound = true;
+                        break;
+                    }
+                }
+
+                if (!componentFound) {
+                    System.err.println("Component " + componentName + " not found in " + assemblyFilePath);
+                } else {
+                    // Save changes
+                    Dispatch.call(assemblyDocument, "Save");
+                }
+
+                // Close the assembly document
+                Dispatch.call(assemblyDocument, "Close");
+
+                return componentFound;
+
             }
 
-            // Close the assembly document
-            Dispatch.call(assemblyDocument, "Close");
-
-            return componentFound;
-
+            System.out.println("Component/Feature " + componentName + " not found in " + assemblyFilePath);
+            return false;
         } catch (Exception e) {
-            System.err.println("Error suppressing component: " + e.getMessage());
-            e.printStackTrace();
+            System.err.println("Error suppressing component/feature: " + e.getMessage());
             return false;
         }
     }
